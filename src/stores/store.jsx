@@ -110,6 +110,7 @@ class Store {
 
     this._callLiquidate(account, address, (err, res) => {
       if(err) {
+        console.log(err)
         return emitter.emit(ERROR, err);
       }
 

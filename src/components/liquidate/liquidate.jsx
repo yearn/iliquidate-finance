@@ -216,13 +216,19 @@ class Liquidate extends Component {
     super()
 
     const account = store.getStore('account')
+    let web3 = null
+
+    if(account && account.address) {
+      web3 = new Web3(store.getStore('web3context').library.provider);
+    }
 
     this.state = {
       account: account,
       address: '',
       addressError: false,
       liquidationData: null,
-      allGood: false
+      allGood: false,
+      web3: web3
     }
   }
 
@@ -245,7 +251,7 @@ class Liquidate extends Component {
   liquidationDataReturned = (liquidationData) => {
     let allGood = true
 
-    if(liquidationData.healthFactor.healthFactor.length <= 18) {
+    if(parseFloat(liquidationData.healthFactor.healthFactorDisplay) >= 1) {
       allGood = false
     }
 
@@ -257,7 +263,7 @@ class Liquidate extends Component {
       allGood = false
     }
 
-    this.setState({ liquidationData, allGood })
+    this.setState({ liquidationData: liquidationData, allGood: allGood })
   }
 
   liquidateReturned = (txHash) => {
@@ -287,6 +293,7 @@ class Liquidate extends Component {
   }
 
   errorReturned = (error) => {
+    console.log(error)
     this.setState({ snackbarMessage: null, snackbarType: null, loading: false })
     const that = this
     setTimeout(() => {
@@ -312,6 +319,8 @@ class Liquidate extends Component {
     if (account.address) {
       addy = account.address.substring(0,6)+'...'+account.address.substring(account.address.length-4,account.address.length)
     }
+
+    console.log(allGood)
 
     return (
       <div className={ classes.root }>
@@ -402,8 +411,10 @@ class Liquidate extends Component {
     val[event.target.name] = event.target.value
     this.setState(val)
 
+    console.log(event.target.value)
     try {
       const address = this.state.web3.utils.toChecksumAddress(event.target.value)
+      console.log(address)
       dispatcher.dispatch({ type: GET_LIQUIDATION_DATA, content: { address: event.target.value }})
     } catch(e) {
       this.setState({ liquidationData: null })

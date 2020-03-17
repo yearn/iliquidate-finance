@@ -278,14 +278,17 @@ class Liquidate extends Component {
     super()
 
     const account = store.getStore('account')
-
-    this.state = {
-      account: account,
-      liquidationCandidates: []
-    }
+    let web3 = null
 
     if(account && account.address) {
       dispatcher.dispatch({ type: GET_LIQUIDATION_CANDIDATES, content: {} })
+      web3 = new Web3(store.getStore('web3context').library.provider);
+    }
+
+    this.state = {
+      account: account,
+      liquidationCandidates: [],
+      web3: web3
     }
   }
 
@@ -437,7 +440,7 @@ class Liquidate extends Component {
 
         const collateralGood = y && y.maxCollateral && y.maxCollateral._reserve !== '0x0000000000000000000000000000000000000000'
         const debtGood = y && y.maxDebt && y.maxDebt._reserve !== '0x0000000000000000000000000000000000000000'
-        const healthFactorGood = y.user.healthFactor > 1
+        const healthFactorGood = y.user.healthFactor < 1
         console.log(y);
         return (
           <tr key={ y.address } className={ classes.pair }>
