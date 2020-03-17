@@ -18,8 +18,8 @@ import {
   CONNECTION_DISCONNECTED,
   LIQUIDATE,
   LIQUIDATE_RETURNED,
-  GET_LIQUIDATION_DATA,
-  LIQUIDATION_DATA_RETURNED,
+  GET_LIQUIDATION_CANDIDATES,
+  LIQUIDATION_CANDIDATES_RETURNED,
 } from '../../constants'
 
 import { withNamespaces } from 'react-i18next';
@@ -33,7 +33,7 @@ const styles = theme => ({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    maxWidth: '1200px',
+    maxWidth: '1400px',
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center'
@@ -44,7 +44,7 @@ const styles = theme => ({
     flexWrap: 'wrap',
     padding: '12px',
     borderRadius: '1.25em',
-    maxWidth: '500px',
+    maxWidth: '1400px',
     justifyContent: 'center',
     marginTop: '20px',
     [theme.breakpoints.up('md')]: {
@@ -77,7 +77,7 @@ const styles = theme => ({
     display: 'flex',
     marginTop: '60px',
     flexWrap: 'wrap',
-    maxWidth: '500px',
+    maxWidth: '1400px',
     justifyContent: 'center',
     padding: '12px',
     minWidth: '100%',
@@ -90,7 +90,7 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    maxWidth: '500px'
+    maxWidth: '1366px'
   },
   introCenter: {
     minWidth: '100%',
@@ -207,7 +207,69 @@ const styles = theme => ({
     fontWeight: 'bold',
     width: '100px',
     paddingBottom: '6px'
-  }
+  },
+  pairs: {
+    borderRadius: '20px',
+    padding: '24px',
+    height: 'max-content',
+    marginTop: '20px'
+  },
+  tablesContainer: {
+    display: 'flex'
+  },
+  tableContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    maxWidth: 'calc(100vw - 68px)',
+    overflowX: 'auto'
+  },
+  headerValue: {
+    fontWeight: 'bold',
+    width: '300px',
+    padding: '6px 12px',
+    paddingBottom: '12px',
+    justifyContent: 'flex-start',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  headerValueHF: {
+    fontWeight: 'bold',
+    width: '120px',
+    padding: '6px 12px',
+    paddingBottom: '12px',
+    justifyContent: 'flex-end',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  aggregatedHeader: {
+    textAlign: 'center',
+  },
+  pair: {
+    display: 'flex',
+    justifyContent: 'flex-start'
+  },
+  healthFactor: {
+    width: '120px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: '55px'
+  },
+  apr: {
+    padding: '6px 12px',
+    width: '300px',
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    height: '55px'
+  },
+  successValue: {
+    color: colors.green
+  },
+  errorValue: {
+    color: colors.red
+  },
 });
 
 class Liquidate extends Component {
@@ -219,10 +281,11 @@ class Liquidate extends Component {
 
     this.state = {
       account: account,
-      address: '',
-      addressError: false,
-      liquidationData: null,
-      allGood: false
+      liquidationCandidates: []
+    }
+
+    if(account && account.address) {
+      dispatcher.dispatch({ type: GET_LIQUIDATION_CANDIDATES, content: {} })
     }
   }
 
@@ -231,7 +294,7 @@ class Liquidate extends Component {
     emitter.on(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.on(CONNECTION_DISCONNECTED, this.connectionDisconnected);
     emitter.on(LIQUIDATE_RETURNED, this.liquidateReturned);
-    emitter.on(LIQUIDATION_DATA_RETURNED, this.liquidationDataReturned);
+    emitter.on(LIQUIDATION_CANDIDATES_RETURNED, this.liquidationCandidatesReturned);
   }
 
   componentWillUnmount() {
@@ -239,25 +302,11 @@ class Liquidate extends Component {
     emitter.removeListener(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.removeListener(CONNECTION_DISCONNECTED, this.connectionDisconnected);
     emitter.removeListener(LIQUIDATE_RETURNED, this.liquidateReturned);
-    emitter.removeListener(LIQUIDATION_DATA_RETURNED, this.liquidationDataReturned);
+    emitter.removeListener(LIQUIDATION_CANDIDATES_RETURNED, this.liquidationCandidatesReturned);
   };
 
-  liquidationDataReturned = (liquidationData) => {
-    let allGood = true
-
-    if(liquidationData.healthFactor.healthFactor.length <= 18) {
-      allGood = false
-    }
-
-    if(liquidationData.maxDebt._reserve === '0x0000000000000000000000000000000000000000') {
-      allGood = false
-    }
-
-    if(liquidationData.maxCollateral._reserve === '0x0000000000000000000000000000000000000000') {
-      allGood = false
-    }
-
-    this.setState({ liquidationData, allGood })
+  liquidationCandidatesReturned = (liquidationCandidates) => {
+    this.setState({ liquidationCandidates })
   }
 
   liquidateReturned = (txHash) => {
@@ -274,6 +323,8 @@ class Liquidate extends Component {
     const web3 = new Web3(store.getStore('web3context').library.provider);
 
     this.setState({ account: store.getStore('account'), web3: web3 })
+
+    dispatcher.dispatch({ type: GET_LIQUIDATION_CANDIDATES, content: {} })
 
     const that = this
     setTimeout(() => {
@@ -344,47 +395,11 @@ class Liquidate extends Component {
                 <div style={{ background: '#DC6BE5', opacity: '1', borderRadius: '10px', width: '10px', height: '10px', marginRight: '3px', marginTop:'3px', marginLeft:'6px' }}></div>
               </Card>
             </div>
-            <Card className={ classes.iHaveContainer }>
-              <Typography variant='h3' className={ classes.inputCardHeading }>{ t("Liquidate.Address") }</Typography>
-              <TextField
-                fullWidth
-                className={ classes.actionInput }
-                id={ 'address' }
-                name={ 'address' }
-                value={ address }
-                error={ addressError }
-                onChange={ this.onChange }
-                disabled={ loading }
-                placeholder={ '0x25...' }
-                variant="outlined"
-              />
-              <div className={ classes.sepperator }></div>
-              <div className={ classes.liquidationContent }>
-                <Typography variant='h1' className={ classes.heading }>Health Factor</Typography>
-                <Typography variant='h3' className={ classes.valueHeading } noWrap>{ 'Amount:' }</Typography>
-                <Typography variant='h3' className={ liquidationData && liquidationData.healthFactor && liquidationData.healthFactor.healthFactor < 1e18 ? classes.successValue : classes.errorValue } noWrap>{ liquidationData && liquidationData.healthFactor ? liquidationData.healthFactor.healthFactorDisplay : '0' }</Typography>
-                <Typography variant='h1' className={ classes.heading }>Max Collateral</Typography>
-                <Typography variant='h3' className={ classes.valueHeading } noWrap>{ 'Reserve:' }</Typography>
-                <Typography variant='h3' className={ liquidationData && liquidationData.maxCollateral && liquidationData.maxCollateral._reserve !== '0x0000000000000000000000000000000000000000' ? classes.successValue : classes.errorValue } noWrap>{ liquidationData && liquidationData.maxCollateral ? liquidationData.maxCollateral._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
-                <Typography variant='h3' className={ classes.valueHeading } noWrap>{ 'Amount:' }</Typography>
-                <Typography variant='h3' className={ classes.value } noWrap>{ liquidationData && liquidationData.maxCollateral ? liquidationData.maxCollateral._amount : '0' }</Typography>
-                <Typography variant='h1' className={ classes.heading }>Max Debt</Typography>
-                <Typography variant='h3' className={ classes.valueHeading } noWrap>{ 'Reserve:' }</Typography>
-                <Typography variant='h3' className={ liquidationData && liquidationData.maxDebt && liquidationData.maxDebt._reserve !== '0x0000000000000000000000000000000000000000' ? classes.successValue : classes.errorValue } noWrap>{ liquidationData && liquidationData.maxDebt ? liquidationData.maxDebt._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
-                <Typography variant='h3' className={ classes.valueHeading } noWrap>{ 'Amount:' }</Typography>
-                <Typography variant='h3' className={ classes.value } noWrap>{ liquidationData && liquidationData.maxDebt ? liquidationData.maxDebt._amount : '0' }</Typography>
-              </div>
-              <div className={ classes.sepperator }></div>
-              <Button
-                className={ classes.actionButton }
-                variant="outlined"
-                color="primary"
-                disabled={ loading || !allGood }
-                onClick={ this.onLiquidate }
-                fullWidth
-                >
-                <Typography className={ classes.buttonText } variant={ 'h5'} color='secondary'>{ t('Liquidate.Liquidate') }</Typography>
-              </Button>
+            <Card className={ classes.pairs }>
+              <table className={ classes.tableContainer }>
+                { this.renderCandidatesHeader() }
+                { this.renderCandidates() }
+              </table>
             </Card>
             <div className={ classes.introCenter }>
             </div>
@@ -397,24 +412,68 @@ class Liquidate extends Component {
     )
   };
 
-  onChange = (event) => {
-    let val = []
-    val[event.target.name] = event.target.value
-    this.setState(val)
+  renderCandidatesHeader = () => {
+    const { classes } = this.props
+    const headers = [ 'address', 'health factor', 'collateral', 'debt', 'action']
 
-    try {
-      const address = this.state.web3.utils.toChecksumAddress(event.target.value)
-      dispatcher.dispatch({ type: GET_LIQUIDATION_DATA, content: { address: event.target.value }})
-    } catch(e) {
-      this.setState({ liquidationData: null })
-    }
-  };
+    return (
+      <tr className={ classes.pair }>
+        { headers.map((header) => {
+          return (<th key={ header } className={ header === 'health factor' ? classes.headerValueHF : classes.headerValue }>
+            <Typography  align='right' variant={'h4'} className={classes.aggregatedHeader}>{ header }</Typography>
+          </th>)
+        })}
+      </tr>
+    )
+  }
 
-  onLiquidate = () => {
-    this.setState({ addressError: false })
+  renderCandidates = () => {
+    const { classes, t } = this.props
+    const { liquidationCandidates, loading } = this.state
 
-    const { address } = this.state
+    return (
+      liquidationCandidates.map((y) => {
 
+        const collateralGood = y && y.maxCollateral && y.maxCollateral._reserve !== '0x0000000000000000000000000000000000000000'
+        const debtGood = y && y.maxDebt && y.maxDebt._reserve !== '0x0000000000000000000000000000000000000000'
+        const healthFactorGood = y.user.healthFactor > 1
+
+        return (
+          <tr key={ y.address } className={ classes.pair }>
+            <td className={ classes.apr }>
+              <Typography variant={'h4'} >{ y.user.id }</Typography>
+            </td>
+            <td className={ classes.healthFactor }>
+              <Typography align='right' color='secondary' noWrap className={ healthFactorGood ? classes.successValue : classes.errorValue }>{ parseFloat(y.user.healthFactor).toFixed(4) }</Typography>
+            </td>
+            <td className={ classes.apr }>
+              <Typography align='right' color='secondary' noWrap className>Amount: { y && y.maxCollateral ? y.maxCollateral._amount : '0' }</Typography>
+              <Typography align='right' color='secondary' noWrap className={ collateralGood ? classes.successValue : classes.errorValue }>{ y && y.maxCollateral ? y.maxCollateral._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
+            </td>
+            <td className={ classes.apr }>
+              <Typography align='right' color='secondary' noWrap>Amount: { y && y.maxDebt ? y.maxDebt._amount : '0' }</Typography>
+              <Typography align='right' color='secondary' noWrap className={ debtGood ? classes.successValue : classes.errorValue }>{ y && y.maxDebt ? y.maxDebt._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
+            </td>
+            <td className={ classes.apr }>
+              { (collateralGood && debtGood && healthFactorGood) &&
+              <Button
+                className={ classes.actionButton }
+                variant="outlined"
+                color="primary"
+                size='small'
+                disabled={ loading}
+                onClick={ () => { this.onLiquidate(y.user.id) } }
+                fullWidth
+                >
+                <Typography className={ classes.buttonText } variant={ 'h5'} color='secondary'>{ t('Liquidate.Liquidate') }</Typography>
+              </Button>}
+            </td>
+          </tr>)
+      })
+    )
+  }
+
+  onLiquidate = (address) => {
     this.setState({ loading: true })
     dispatcher.dispatch({ type: LIQUIDATE, content: { address } })
   }

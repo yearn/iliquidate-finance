@@ -11,6 +11,7 @@ import './i18n';
 import theme from './theme';
 
 import Liquidate from './components/liquidate';
+import LiquidationCandidates from './components/liquidationCandidates'
 import Footer from './components/footer';
 import Home from './components/home';
 
@@ -34,8 +35,11 @@ class App extends Component {
               <Route path="/liquidate">
                 <Liquidate />
               </Route>
+              <Route path="/liquidationCandidates">
+                <LiquidationCandidates />
+              </Route>
               <Route path="/">
-                <Liquidate />
+                <Home />
               </Route>
             </Switch>
           </div>

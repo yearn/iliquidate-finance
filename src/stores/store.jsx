@@ -190,12 +190,16 @@ class Store {
   }
 
   getLiquidationCandidates = (payload) => {
+    const account = store.getStore('account')
+    const web3 = new Web3(store.getStore('web3context').library.provider);
+
     const url = 'https://protocol-api.aave.com/data/users/liquidations';
 
     axios.get(url)
     .then(function (response) {
+      console.log(response.data.data)
       // handle success
-      const filteredData = response.data.data
+      const possibleLiquidations = response.data.data
       .filter(x => {
         return parseFloat(x.user.totalLiquidityETH) != 0
       })
@@ -221,11 +225,30 @@ class Store {
         return 0;
       })
       .map(x => {
-        console.log(x);
         return x
       })
 
-      return emitter.emit(LIQUIDATION_CANDIDATES_RETURNED, filteredData)
+      const that = this
+
+      async.map(possibleLiquidations, (liquidation, callbackInner) => {
+        async.parallel([
+          (callback) => { store._getMaxCollateral(web3, account, liquidation.user.id, callback) },
+          (callback) => { store._getMaxDebt(web3, account, liquidation.user.id, callback) },
+        ], (err, data) => {
+          if(err) {
+            return emitter.emit(ERROR, err);
+          }
+
+          liquidation.maxCollateral = data[0]
+          liquidation.maxDebt = data[1]
+
+          callbackInner(null, liquidation)
+        })
+      }, (err, liquidations) => {
+
+        return emitter.emit(LIQUIDATION_CANDIDATES_RETURNED, liquidations)
+      })
+
     })
     .catch(function (error) {
       // handle error

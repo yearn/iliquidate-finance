@@ -75,7 +75,7 @@ class Footer extends Component {
       language
     } = this.state
 
-    if(!location.pathname.includes('/liquidate')) {
+    if(!location.pathname.includes('/liquidate') && !location.pathname.includes('/liquidationCandidates')) {
       return null
     }
 

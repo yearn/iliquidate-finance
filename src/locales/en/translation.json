@@ -10,9 +10,8 @@
 
   "Footer.Home": "home",
 
-  "Home.Collateral": "Collateral",
-  "Home.Supply": "Supply",
-  "Home.Borrow": "Borrow",
+  "Home.Liquidate": "Liquidate",
+  "Home.Candidates": "Candidates",
 
   "Liquidate.Intro": "Liquidate. Simple.",
   "Liquidate.Connect": "Connect",

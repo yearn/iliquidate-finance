@@ -8,9 +8,8 @@ import {
 import { withNamespaces } from 'react-i18next';
 import { colors } from '../../theme'
 
-import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
-import PieChartIcon from '@material-ui/icons/PieChart';
-import TrendingUpIcon from '@material-ui/icons/TrendingUp';
+import OpacityIcon from '@material-ui/icons/Opacity';
+import ReorderIcon from '@material-ui/icons/Reorder';
 
 const styles = theme => ({
   root: {
@@ -168,17 +167,13 @@ class Home extends Component {
 
     return (
       <div className={ classes.root }>
-        <Card className={ `${classes.card} ${classes.earn}` } onClick={ () => { this.nav(location.pathname+'collateral') } }>
-          <AttachMoneyIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>{ t("Home.Collateral") }</Typography>
+        <Card className={ `${classes.card} ${classes.earn}` } onClick={ () => { this.nav(location.pathname+'liquidate') } }>
+          <OpacityIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h1'} className={ `${classes.title} title` }>{ t("Home.Liquidate") }</Typography>
         </Card>
-        <Card className={ `${classes.card} ${classes.zap}` } onClick={ () => { this.nav(location.pathname+'supply') } }>
-          <PieChartIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>{ t("Home.Supply") }</Typography>
-        </Card>
-        <Card className={ `${classes.card} ${classes.pool}` } onClick={ () => { this.nav(location.pathname+'trade') } }>
-          <TrendingUpIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>{ t("Home.Borrow") }</Typography>
+        <Card className={ `${classes.card} ${classes.zap}` } onClick={ () => { this.nav(location.pathname+'liquidationCandidates') } }>
+          <ReorderIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h1'} className={ `${classes.title} title` }>{ t("Home.Candidates") }</Typography>
         </Card>
       </div>
     )
