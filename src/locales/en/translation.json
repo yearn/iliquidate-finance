@@ -1,0 +1,22 @@
+{
+  "Unlock.Deactivate": "Deactivate",
+  "Unlock.WalletConnected": "Wallet successfully connected.",
+
+  "Snackbar.Error": "Error",
+  "Snackbar.Warning": "Warning",
+  "Snackbar.Info": "Info",
+  "Snackbar.Succecss": "Success",
+  "Snackbar.Hash": "Hash",
+
+  "Footer.Home": "home",
+
+  "Home.Collateral": "Collateral",
+  "Home.Supply": "Supply",
+  "Home.Borrow": "Borrow",
+
+  "Liquidate.Intro": "Liquidate. Simple.",
+  "Liquidate.Connect": "Connect",
+  "Liquidate.Liquidate": "Liquidate",
+  "Liquidate.Address": "Liquidation address"
+
+}
