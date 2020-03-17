@@ -26,6 +26,12 @@ import {
 } from "./connectors";
 
 const axios = require('axios');
+const aave = require('@aave/protocol-js');
+const moment = require('moment');
+
+function getCurrentTimestamp() {
+  return Number(moment().format('X'));
+}
 
 const Dispatcher = require('flux').Dispatcher;
 const Emitter = require('events').EventEmitter;
@@ -197,57 +203,51 @@ class Store {
 
     axios.get(url)
     .then(function (response) {
-      console.log(response.data.data)
-      // handle success
-      const possibleLiquidations = response.data.data
-      .filter(x => {
-        return parseFloat(x.user.totalLiquidityETH) != 0
-      })
-      .filter(x => {
-        return x.reserve.symbol != 'ETH'
-      })
-      .filter(x => {
-        return x.user.reservesData.length == 2
-      })
-      .filter(x => {
-        return x.user.reservesData[0].reserve.symbol != 'ETH'&&x.user.reservesData[1].reserve.symbol != 'ETH'
-      })
-      .filter(x => {
-        return parseFloat(x.principalBorrows) >= 100
-      })
-      .sort((a,b) => {
-        if (parseFloat(a.user.maxAmountToWithdrawInEth) > parseFloat(b.user.maxAmountToWithdrawInEth)) {
-          return -1;
-        }
-        if (parseFloat(a.user.maxAmountToWithdrawInEth) < parseFloat(b.user.maxAmountToWithdrawInEth)) {
-          return 1;
-        }
-        return 0;
-      })
-      .map(x => {
-        return x
-      })
-
-      const that = this
-
-      async.map(possibleLiquidations, (liquidation, callbackInner) => {
-        async.parallel([
-          (callback) => { store._getMaxCollateral(web3, account, liquidation.user.id, callback) },
-          (callback) => { store._getMaxDebt(web3, account, liquidation.user.id, callback) },
-        ], (err, data) => {
-          if(err) {
-            return emitter.emit(ERROR, err);
-          }
-
-          liquidation.maxCollateral = data[0]
-          liquidation.maxDebt = data[1]
-
-          callbackInner(null, liquidation)
+        // handle success
+        const possibleLiquidations = response.data.data
+        .filter(x => {
+          return parseFloat(x.user.totalLiquidityETH) != 0
         })
-      }, (err, liquidations) => {
+        .filter(x => {
+          return x.reserve.symbol != 'ETH'
+        })
+        .sort((a,b) => {
+          if (parseFloat(a.user.maxAmountToWithdrawInEth) > parseFloat(b.user.maxAmountToWithdrawInEth)) {
+            return -1;
+          }
+          if (parseFloat(a.user.maxAmountToWithdrawInEth) < parseFloat(b.user.maxAmountToWithdrawInEth)) {
+            return 1;
+          }
+          return 0;
+        })
+        .map(x => {
+          return x
+        })
 
-        return emitter.emit(LIQUIDATION_CANDIDATES_RETURNED, liquidations)
-      })
+        const that = this
+
+        async.map(possibleLiquidations, (liquidation, callbackInner) => {
+          async.parallel([
+            (callback) => { store._getMaxCollateral(web3, account, liquidation.user.id, callback) },
+            (callback) => { store._getMaxDebt(web3, account, liquidation.user.id, callback) },
+          ], (err, data) => {
+            if(err) {
+              return emitter.emit(ERROR, err);
+            }
+
+            liquidation.maxCollateral = data[0]
+            liquidation.maxDebt = data[1]
+
+            callbackInner(null, liquidation)
+          })
+        }, (err, liquidations) => {
+          liquidations = liquidations.filter(x => {
+            return x.maxCollateral._reserve != "0x0000000000000000000000000000000000000000"&&x.maxDebt._reserve != "0x0000000000000000000000000000000000000000";
+          }).filter(x => {
+            return x.maxCollateral._reserve != x.maxDebt._reserve;
+          })
+          return emitter.emit(LIQUIDATION_CANDIDATES_RETURNED, liquidations)
+        })
 
     })
     .catch(function (error) {

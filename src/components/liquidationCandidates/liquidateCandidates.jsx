@@ -432,12 +432,13 @@ class Liquidate extends Component {
     const { liquidationCandidates, loading } = this.state
 
     return (
-      liquidationCandidates.map((y) => {
+      liquidationCandidates
+      .map((y) => {
 
         const collateralGood = y && y.maxCollateral && y.maxCollateral._reserve !== '0x0000000000000000000000000000000000000000'
         const debtGood = y && y.maxDebt && y.maxDebt._reserve !== '0x0000000000000000000000000000000000000000'
         const healthFactorGood = y.user.healthFactor > 1
-
+        console.log(y);
         return (
           <tr key={ y.address } className={ classes.pair }>
             <td className={ classes.apr }>
@@ -447,12 +448,12 @@ class Liquidate extends Component {
               <Typography align='right' color='secondary' noWrap className={ healthFactorGood ? classes.successValue : classes.errorValue }>{ parseFloat(y.user.healthFactor).toFixed(4) }</Typography>
             </td>
             <td className={ classes.apr }>
-              <Typography align='right' color='secondary' noWrap className>Amount: { y && y.maxCollateral ? y.maxCollateral._amount : '0' }</Typography>
-              <Typography align='right' color='secondary' noWrap className={ collateralGood ? classes.successValue : classes.errorValue }>{ y && y.maxCollateral ? y.maxCollateral._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
+              <Typography align='right' color='secondary' noWrap className>{ y && y.maxCollateral ? this.mapAmount(y.maxCollateral._reserve, y.maxCollateral._amount) : '0' }</Typography>
+              <Typography align='right' color='secondary' noWrap className={ collateralGood ? classes.successValue : classes.errorValue }>{ y && y.maxCollateral ? this.mapAddress(y.maxCollateral._reserve) : '0x0000000000000000000000000000000000000000' }</Typography>
             </td>
             <td className={ classes.apr }>
-              <Typography align='right' color='secondary' noWrap>Amount: { y && y.maxDebt ? y.maxDebt._amount : '0' }</Typography>
-              <Typography align='right' color='secondary' noWrap className={ debtGood ? classes.successValue : classes.errorValue }>{ y && y.maxDebt ? y.maxDebt._reserve : '0x0000000000000000000000000000000000000000' }</Typography>
+              <Typography align='right' color='secondary' noWrap>{ y && y.maxDebt ? this.mapAmount(y.maxDebt._reserve, y.maxDebt._amount) : '0' }</Typography>
+              <Typography align='right' color='secondary' noWrap className={ debtGood ? classes.successValue : classes.errorValue }>{ y && y.maxDebt ? this.mapAddress(y.maxDebt._reserve) : '0x0000000000000000000000000000000000000000' }</Typography>
             </td>
             <td className={ classes.apr }>
               { (collateralGood && debtGood && healthFactorGood) &&
@@ -471,6 +472,76 @@ class Liquidate extends Component {
           </tr>)
       })
     )
+  }
+
+  mapAddress = (address) => {
+    address = address.toLowerCase();
+    if (address == '0x6b175474e89094c44da98b954eedeac495271d0f') {
+      return 'DAI';
+    } else if (address == '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') {
+      return 'USDC';
+    } else if (address == '0x57ab1ec28d129707052df4df418d58a2d46d5f51') {
+      return 'SUSD';
+    } else if (address == '0x0000000000085d4780b73119b644ae5ecd22b376') {
+      return 'TUSD';
+    } else if (address == '0xdac17f958d2ee523a2206206994597c13d831ec7') {
+      return 'USDT';
+    } else if (address == '0x0d8775f648430679a709e98d2b0cb6250d2887ef') {
+      return 'BAT';
+    } else if (address == '0xdd974d5c2e2928dea5f71b9825b8b646686bd200') {
+      return 'KNC';
+    } else if (address == '0x80fb784b7ed66730e8b1dbd9820afd29931aab03') {
+      return 'LEND';
+    } else if (address == '0x514910771af9ca656af840dff83e8264ecf986ca') {
+      return 'LINK';
+    } else if (address == '0x0f5d2fb29fb7d3cfee444a200298f468908cc942') {
+      return 'MANA';
+    } else if (address == '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2') {
+      return 'MKR';
+    } else if (address == '0x1985365e9f78359a9b6ad760e32412f4a445e862') {
+      return 'REP';
+    } else if (address == '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f') {
+      return 'SNX';
+    } else if (address == '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599') {
+      return 'WBTC';
+    } else if (address == '0xe41d2489571d322189246dafa5ebde1f4699f498') {
+      return 'ZRX';
+    }
+  }
+  mapAmount = (address, amount) => {
+    address = address.toLowerCase();
+    amount = parseFloat(amount);
+    if (address == '0x6b175474e89094c44da98b954eedeac495271d0f') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') {
+      return (amount/1e6).toFixed(4);
+    } else if (address == '0x57ab1ec28d129707052df4df418d58a2d46d5f51') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x0000000000085d4780b73119b644ae5ecd22b376') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0xdac17f958d2ee523a2206206994597c13d831ec7') {
+      return (amount/1e6).toFixed(4);
+    } else if (address == '0x0d8775f648430679a709e98d2b0cb6250d2887ef') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0xdd974d5c2e2928dea5f71b9825b8b646686bd200') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x80fb784b7ed66730e8b1dbd9820afd29931aab03') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x514910771af9ca656af840dff83e8264ecf986ca') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x0f5d2fb29fb7d3cfee444a200298f468908cc942') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x1985365e9f78359a9b6ad760e32412f4a445e862') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f') {
+      return (amount/1e18).toFixed(4);
+    } else if (address == '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599') {
+      return (amount/1e8).toFixed(4);
+    } else if (address == '0xe41d2489571d322189246dafa5ebde1f4699f498') {
+      return (amount/1e18).toFixed(4);
+    }
   }
 
   onLiquidate = (address) => {
