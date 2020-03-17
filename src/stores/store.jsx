@@ -7,7 +7,9 @@ import {
   GET_LIQUIDATION_CANDIDATES,
   LIQUIDATION_CANDIDATES_RETURNED,
   GET_LIQUIDATION_DATA,
-  LIQUIDATION_DATA_RETURNED
+  LIQUIDATION_DATA_RETURNED,
+  REFRESH_LIQUIDATION_CANDIDATES,
+  REFRESH_LIQUIDATION_CANDIDATES_RETURNED
 } from '../constants';
 import Web3 from 'web3';
 
@@ -87,6 +89,9 @@ class Store {
           case GET_LIQUIDATION_DATA:
             this.getLiquidationData(payload)
             break;
+          case REFRESH_LIQUIDATION_CANDIDATES:
+            this.refreshLiquidationCandidates(payload);
+            break;
           default: {
 
           }
@@ -165,8 +170,6 @@ class Store {
         return emitter.emit(ERROR, err);
       }
 
-      console.log(data)
-
       const res = {
         healthFactor: data[0],
         maxCollateral: data[1],
@@ -194,6 +197,70 @@ class Store {
     const liquidationContract = new web3.eth.Contract(config.liquidationContractABI, config.liquidationContractAddress)
     const maxDebt = await liquidationContract.methods.getMaxDebt(address).call({ from: account.address })
     callback(null, maxDebt)
+  }
+
+  refreshLiquidationCandidates = (payload) => {
+    const account = store.getStore('account')
+    const web3 = new Web3(store.getStore('web3context').library.provider);
+
+    const url = 'https://protocol-api.aave.com/data/users/liquidations';
+
+    axios.get(url)
+    .then(function (response) {
+        // handle success
+        const possibleLiquidations = response.data.data
+        .filter(x => {
+          return parseFloat(x.user.totalLiquidityETH) != 0
+        })
+        .filter(x => {
+          return x.reserve.symbol != 'ETH'
+        })
+        .sort((a,b) => {
+          if (parseFloat(a.user.maxAmountToWithdrawInEth) > parseFloat(b.user.maxAmountToWithdrawInEth)) {
+            return -1;
+          }
+          if (parseFloat(a.user.maxAmountToWithdrawInEth) < parseFloat(b.user.maxAmountToWithdrawInEth)) {
+            return 1;
+          }
+          return 0;
+        })
+        .map(x => {
+          return x
+        })
+
+        const that = this
+
+        async.map(possibleLiquidations, (liquidation, callbackInner) => {
+          async.parallel([
+            (callback) => { store._getMaxCollateral(web3, account, liquidation.user.id, callback) },
+            (callback) => { store._getMaxDebt(web3, account, liquidation.user.id, callback) },
+          ], (err, data) => {
+            if(err) {
+              return emitter.emit(ERROR, err);
+            }
+
+            liquidation.maxCollateral = data[0]
+            liquidation.maxDebt = data[1]
+
+            callbackInner(null, liquidation)
+          })
+        }, (err, liquidations) => {
+          liquidations = liquidations.filter(x => {
+            return x.maxCollateral._reserve != "0x0000000000000000000000000000000000000000"&&x.maxDebt._reserve != "0x0000000000000000000000000000000000000000";
+          }).filter(x => {
+            return x.maxCollateral._reserve != x.maxDebt._reserve;
+          })
+          return emitter.emit(REFRESH_LIQUIDATION_CANDIDATES_RETURNED, liquidations)
+        })
+
+    })
+    .catch(function (error) {
+      // handle error
+      console.log(error);
+    })
+    .then(function () {
+      // always executed
+    });
   }
 
   getLiquidationCandidates = (payload) => {

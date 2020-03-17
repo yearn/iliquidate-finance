@@ -5,8 +5,10 @@ import {
   Card,
   Typography,
   Button,
-  TextField
+  TextField,
+  IconButton
 } from '@material-ui/core';
+import RefreshIcon from '@material-ui/icons/Refresh';
 import Web3 from 'web3';
 import Loader from '../loader'
 import UnlockModal from '../unlock/unlockModal.jsx'
@@ -20,6 +22,8 @@ import {
   LIQUIDATE_RETURNED,
   GET_LIQUIDATION_CANDIDATES,
   LIQUIDATION_CANDIDATES_RETURNED,
+  REFRESH_LIQUIDATION_CANDIDATES,
+  REFRESH_LIQUIDATION_CANDIDATES_RETURNED
 } from '../../constants'
 
 import { withNamespaces } from 'react-i18next';
@@ -33,7 +37,6 @@ const styles = theme => ({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    maxWidth: '1400px',
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center'
@@ -90,7 +93,7 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    maxWidth: '1366px'
+    maxWidth: '1000px'
   },
   introCenter: {
     minWidth: '100%',
@@ -218,7 +221,6 @@ const styles = theme => ({
     display: 'flex'
   },
   tableContainer: {
-    display: 'flex',
     flexWrap: 'wrap',
     maxWidth: 'calc(100vw - 68px)',
     overflowX: 'auto'
@@ -234,7 +236,7 @@ const styles = theme => ({
   },
   headerValueHF: {
     fontWeight: 'bold',
-    width: '120px',
+    width: '150px',
     padding: '6px 12px',
     paddingBottom: '12px',
     justifyContent: 'flex-end',
@@ -249,7 +251,7 @@ const styles = theme => ({
     justifyContent: 'flex-start'
   },
   healthFactor: {
-    width: '120px',
+    width: '150px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -298,6 +300,7 @@ class Liquidate extends Component {
     emitter.on(CONNECTION_DISCONNECTED, this.connectionDisconnected);
     emitter.on(LIQUIDATE_RETURNED, this.liquidateReturned);
     emitter.on(LIQUIDATION_CANDIDATES_RETURNED, this.liquidationCandidatesReturned);
+    emitter.on(REFRESH_LIQUIDATION_CANDIDATES_RETURNED, this.refreshLiquidationCandidatesReturned);
   }
 
   componentWillUnmount() {
@@ -306,10 +309,24 @@ class Liquidate extends Component {
     emitter.removeListener(CONNECTION_DISCONNECTED, this.connectionDisconnected);
     emitter.removeListener(LIQUIDATE_RETURNED, this.liquidateReturned);
     emitter.removeListener(LIQUIDATION_CANDIDATES_RETURNED, this.liquidationCandidatesReturned);
+    emitter.removeListener(REFRESH_LIQUIDATION_CANDIDATES_RETURNED, this.refreshLiquidationCandidatesReturned);
   };
+
+  refresh = () => {
+    this.setState({ loading: true })
+    dispatcher.dispatch({ type: REFRESH_LIQUIDATION_CANDIDATES, content: {} })
+  }
+
+  refreshLiquidationCandidatesReturned = (liquidationCandidates) => {
+    this.setState({ liquidationCandidates, loading: false })
+  }
 
   liquidationCandidatesReturned = (liquidationCandidates) => {
     this.setState({ liquidationCandidates })
+
+    setTimeout(() => {
+      dispatcher.dispatch({ type: GET_LIQUIDATION_CANDIDATES, content: {} })
+    }, 5000)
   }
 
   liquidateReturned = (txHash) => {
@@ -417,12 +434,12 @@ class Liquidate extends Component {
 
   renderCandidatesHeader = () => {
     const { classes } = this.props
-    const headers = [ 'address', 'health factor', 'collateral', 'debt', 'action']
+    const headers = [ 'address', 'health factor', 'collateral', 'debt', 'action', <IconButton onClick={ this.refresh }><RefreshIcon /></IconButton>]
 
     return (
       <tr className={ classes.pair }>
         { headers.map((header) => {
-          return (<th key={ header } className={ header === 'health factor' ? classes.headerValueHF : classes.headerValue }>
+          return (<th key={ header } className={ ['address'].includes(header) ? classes.headerValue : classes.headerValueHF }>
             <Typography  align='right' variant={'h4'} className={classes.aggregatedHeader}>{ header }</Typography>
           </th>)
         })}
@@ -441,7 +458,7 @@ class Liquidate extends Component {
         const collateralGood = y && y.maxCollateral && y.maxCollateral._reserve !== '0x0000000000000000000000000000000000000000'
         const debtGood = y && y.maxDebt && y.maxDebt._reserve !== '0x0000000000000000000000000000000000000000'
         const healthFactorGood = y.user.healthFactor < 1
-        console.log(y);
+
         return (
           <tr key={ y.address } className={ classes.pair }>
             <td className={ classes.apr }>
@@ -450,11 +467,11 @@ class Liquidate extends Component {
             <td className={ classes.healthFactor }>
               <Typography align='right' color='secondary' noWrap className={ healthFactorGood ? classes.successValue : classes.errorValue }>{ parseFloat(y.user.healthFactor).toFixed(4) }</Typography>
             </td>
-            <td className={ classes.apr }>
+            <td className={ classes.healthFactor }>
               <Typography align='right' color='secondary' noWrap className>{ y && y.maxCollateral ? this.mapAmount(y.maxCollateral._reserve, y.maxCollateral._amount) : '0' }</Typography>
               <Typography align='right' color='secondary' noWrap className={ collateralGood ? classes.successValue : classes.errorValue }>{ y && y.maxCollateral ? this.mapAddress(y.maxCollateral._reserve) : '0x0000000000000000000000000000000000000000' }</Typography>
             </td>
-            <td className={ classes.apr }>
+            <td className={ classes.healthFactor }>
               <Typography align='right' color='secondary' noWrap>{ y && y.maxDebt ? this.mapAmount(y.maxDebt._reserve, y.maxDebt._amount) : '0' }</Typography>
               <Typography align='right' color='secondary' noWrap className={ debtGood ? classes.successValue : classes.errorValue }>{ y && y.maxDebt ? this.mapAddress(y.maxDebt._reserve) : '0x0000000000000000000000000000000000000000' }</Typography>
             </td>
