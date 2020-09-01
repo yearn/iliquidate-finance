@@ -208,7 +208,7 @@ class Store {
     axios.get(url)
     .then(function (response) {
         // handle success
-        const possibleLiquidations = response.data.data
+        const possibleLiquidations = JSON.parse(response.data).data
         .filter(x => {
           return parseFloat(x.user.totalLiquidityETH) != 0
         })
@@ -271,8 +271,9 @@ class Store {
 
     axios.get(url)
     .then(function (response) {
+
         // handle success
-        const possibleLiquidations = response.data.data
+        const possibleLiquidations = JSON.parse(response.data).data
         .filter(x => {
           return parseFloat(x.user.totalLiquidityETH) != 0
         })
